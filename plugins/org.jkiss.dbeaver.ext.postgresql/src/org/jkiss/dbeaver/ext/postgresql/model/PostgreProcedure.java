@@ -54,6 +54,7 @@ public class PostgreProcedure extends AbstractProcedure<PostgreDataSource, Postg
 
     private static final String CAT_FLAGS = "Flags";
     private static final String CAT_PROPS = "Properties";
+    private static final String ERROR_READING_PROCEDURE_BODY = "Error reading procedure body";
 
     public static final float DEFAULT_EST_ROWS = 1000.0f;
     public static final float DEFAULT_COST = 100.0f;
@@ -377,7 +378,7 @@ public class PostgreProcedure extends AbstractProcedure<PostgreDataSource, Postg
                 try (JDBCSession session = DBUtils.openMetaSession(monitor, this, "Read procedure body")) {
                     procSrc = JDBCUtils.queryString(session, "SELECT prosrc FROM pg_proc where oid = ?", getObjectId());
                 } catch (SQLException e) {
-                    throw new DBException("Error reading procedure body", e);
+                    throw new DBException(ERROR_READING_PROCEDURE_BODY, e);
                 }
             }
             PostgreDataType returnType = getReturnType();
@@ -399,13 +400,8 @@ public class PostgreProcedure extends AbstractProcedure<PostgreDataSource, Postg
                         try (JDBCSession session = DBUtils.openMetaSession(monitor, this, "Read procedure body")) {
                             body = JDBCUtils.queryString(session, "SELECT pg_get_functiondef(" + getObjectId() + ")");
                         } catch (SQLException e) {
-                            if (!CommonUtils.isEmpty(this.procSrc)) {
-                                log.debug("Error reading procedure body", e);
-                                // At least we have it
-                                body = this.procSrc;
-                            } else {
-                                throw new DBException("Error reading procedure body", e);
-                            }
+                            log.debug(ERROR_READING_PROCEDURE_BODY, e);
+                            throw new DBException(ERROR_READING_PROCEDURE_BODY, e);
                         }
                     }
                 }
